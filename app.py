@@ -1,11 +1,8 @@
 # ltorres_cotador_app.py
 import streamlit as st
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-import time
-import os
+import asyncio
+from playwright.async_api import async_playwright
 
 # ---------------- LOGO ------------------
 st.image("logo_ltorres_otimizada.png", use_column_width=True)
@@ -18,63 +15,63 @@ produto = st.text_input("Digite o nome do produto a ser cotado:")
 iniciar = st.button("Buscar Cotações")
 
 # ----------- FUNÇÃO DE BUSCA -----------
-def buscar_preco_marest(produto):
+async def buscar_preco_marest(produto):
     try:
-        options = Options()
-        options.add_argument("--headless")
-        driver = webdriver.Chrome(options=options)
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.goto("https://www.marest.com.br/login")
 
-        driver.get("https://www.marest.com.br/login")
-        time.sleep(1)
+            # login
+            await page.fill("input[name='username']", os.getenv("MAREST_USER"))
+            await page.fill("input[name='password']", os.getenv("MAREST_PASS"))
+            await page.click("button[type='submit']")
+            await page.wait_for_timeout(2000)
 
-        driver.find_element(By.NAME, "username").send_keys(os.getenv("MAREST_USER"))
-        driver.find_element(By.NAME, "password").send_keys(os.getenv("MAREST_PASS"))
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
+            # busca
+            await page.goto("https://www.marest.com.br")
+            await page.fill("input[name='q']", produto)
+            await page.click("button[type='submit']")
+            await page.wait_for_timeout(2000)
 
-        driver.get("https://www.marest.com.br")
-        search_box = driver.find_element(By.NAME, "q")
-        search_box.send_keys(produto)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
-
-        preco = driver.find_element(By.CSS_SELECTOR, ".preco .valor").text
-        driver.quit()
-        return preco
+            preco = await page.text_content(".preco .valor")
+            await browser.close()
+            return preco
     except Exception as e:
         return f"Erro: {e}"
 
-def buscar_preco_magia(produto):
+
+async def buscar_preco_magia(produto):
     try:
-        options = Options()
-        options.add_argument("--headless")
-        driver = webdriver.Chrome(options=options)
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.goto("https://www.magia.com.br/login")
 
-        driver.get("https://www.magia.com.br/login")
-        time.sleep(1)
+            # login
+            await page.fill("input[name='username']", os.getenv("MAGIA_USER"))
+            await page.fill("input[name='password']", os.getenv("MAGIA_PASS"))
+            await page.click("button[type='submit']")
+            await page.wait_for_timeout(2000)
 
-        driver.find_element(By.NAME, "username").send_keys(os.getenv("MAGIA_USER"))
-        driver.find_element(By.NAME, "password").send_keys(os.getenv("MAGIA_PASS"))
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
+            # busca
+            await page.goto("https://www.magia.com.br")
+            await page.fill("input[name='q']", produto)
+            await page.click("button[type='submit']")
+            await page.wait_for_timeout(2000)
 
-        driver.get("https://www.magia.com.br")
-        search_box = driver.find_element(By.NAME, "q")
-        search_box.send_keys(produto)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
-
-        preco = driver.find_element(By.CSS_SELECTOR, ".preco .valor").text
-        driver.quit()
-        return preco
+            preco = await page.text_content(".preco .valor")
+            await browser.close()
+            return preco
     except Exception as e:
         return f"Erro: {e}"
 
 # ------------ RODANDO ------------------
 if iniciar and produto:
     with st.spinner("Buscando preços..."):
-        preco_marest = buscar_preco_marest(produto)
-        preco_magia = buscar_preco_magia(produto)
+        preco_marest = asyncio.run(buscar_preco_marest(produto))
+        preco_magia = asyncio.run(buscar_preco_magia(produto))
+
 
     # Tabela de resultado
     data = {
