@@ -2,12 +2,8 @@
 import streamlit as st
 import pandas as pd
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-import time
+import requests
+from bs4 import BeautifulSoup
 
 # ---------------- LOGO ------------------
 st.image("logo_ltorres_otimizada.png", use_container_width=True)
@@ -19,65 +15,27 @@ produto = st.text_input("Digite o nome do produto a ser cotado:")
 # ------------- BOTÃO --------------------
 iniciar = st.button("Buscar Cotações")
 
-# ----------- DRIVER CONFIG -----------
-def iniciar_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-
-    # Tenta definir o caminho binário do Chrome
-    if os.path.exists("/usr/bin/google-chrome"):
-        chrome_options.binary_location = "/usr/bin/google-chrome"
-    elif os.path.exists("/usr/bin/chromium-browser"):
-        chrome_options.binary_location = "/usr/bin/chromium-browser"
-
-    # Instala driver em /tmp para evitar erro de cache
-    service = Service(ChromeDriverManager(path="/tmp").install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    return driver
-
 # ----------- FUNÇÃO DE BUSCA -----------
 def buscar_preco_marest(produto):
     try:
-        driver = iniciar_driver()
-        driver.get("https://www.marest.com.br/login")
-
-        driver.find_element(By.NAME, "username").send_keys(os.getenv("MAREST_USER"))
-        driver.find_element(By.NAME, "password").send_keys(os.getenv("MAREST_PASS"))
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
-
-        driver.get("https://www.marest.com.br")
-        driver.find_element(By.NAME, "q").send_keys(produto)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
-
-        preco = driver.find_element(By.CSS_SELECTOR, ".preco .valor").text
-        driver.quit()
-        return preco
+        url = "https://www.marest.com.br/busca"
+        params = {"q": produto}
+        r = requests.get(url, params=params, timeout=10)
+        soup = BeautifulSoup(r.text, "html.parser")
+        preco = soup.select_one(".preco .valor")
+        return preco.text.strip() if preco else "Não encontrado"
     except Exception as e:
         return f"Erro: {e}"
 
 
 def buscar_preco_magia(produto):
     try:
-        driver = iniciar_driver()
-        driver.get("https://www.magia.com.br/login")
-
-        driver.find_element(By.NAME, "username").send_keys(os.getenv("MAGIA_USER"))
-        driver.find_element(By.NAME, "password").send_keys(os.getenv("MAGIA_PASS"))
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
-
-        driver.get("https://www.magia.com.br")
-        driver.find_element(By.NAME, "q").send_keys(produto)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(2)
-
-        preco = driver.find_element(By.CSS_SELECTOR, ".preco .valor").text
-        driver.quit()
-        return preco
+        url = "https://www.magia.com.br/busca"
+        params = {"q": produto}
+        r = requests.get(url, params=params, timeout=10)
+        soup = BeautifulSoup(r.text, "html.parser")
+        preco = soup.select_one(".preco .valor")
+        return preco.text.strip() if preco else "Não encontrado"
     except Exception as e:
         return f"Erro: {e}"
 
