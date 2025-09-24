@@ -25,7 +25,15 @@ def iniciar_driver():
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    service = Service(ChromeDriverManager().install())
+
+    # Tenta definir o caminho binário do Chrome
+    if os.path.exists("/usr/bin/google-chrome"):
+        chrome_options.binary_location = "/usr/bin/google-chrome"
+    elif os.path.exists("/usr/bin/chromium-browser"):
+        chrome_options.binary_location = "/usr/bin/chromium-browser"
+
+    # Instala driver em /tmp para evitar erro de cache
+    service = Service(ChromeDriverManager(path="/tmp").install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     return driver
 
@@ -35,13 +43,11 @@ def buscar_preco_marest(produto):
         driver = iniciar_driver()
         driver.get("https://www.marest.com.br/login")
 
-        # login
         driver.find_element(By.NAME, "username").send_keys(os.getenv("MAREST_USER"))
         driver.find_element(By.NAME, "password").send_keys(os.getenv("MAREST_PASS"))
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
         time.sleep(2)
 
-        # busca
         driver.get("https://www.marest.com.br")
         driver.find_element(By.NAME, "q").send_keys(produto)
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
@@ -59,13 +65,11 @@ def buscar_preco_magia(produto):
         driver = iniciar_driver()
         driver.get("https://www.magia.com.br/login")
 
-        # login
         driver.find_element(By.NAME, "username").send_keys(os.getenv("MAGIA_USER"))
         driver.find_element(By.NAME, "password").send_keys(os.getenv("MAGIA_PASS"))
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
         time.sleep(2)
 
-        # busca
         driver.get("https://www.magia.com.br")
         driver.find_element(By.NAME, "q").send_keys(produto)
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
@@ -77,21 +81,18 @@ def buscar_preco_magia(produto):
     except Exception as e:
         return f"Erro: {e}"
 
-
 # ------------ RODANDO ------------------
 if iniciar and produto:
     with st.spinner("Buscando preços..."):
         preco_marest = buscar_preco_marest(produto)
         preco_magia = buscar_preco_magia(produto)
 
-    # Tabela de resultado
     data = {
         "Fornecedor": ["Marest", "Magia"],
         "Preço": [preco_marest, preco_magia]
     }
     df = pd.DataFrame(data)
 
-    # Destaque menor preço
     try:
         df["Preço num"] = df["Preço"].replace("[R$ ]", "", regex=True).str.replace(",", ".").astype(float)
         menor = df["Preço num"].idxmin()
