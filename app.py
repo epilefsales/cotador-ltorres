@@ -16,11 +16,14 @@ produto = st.text_input("Digite o nome do produto a ser cotado:")
 iniciar = st.button("Buscar Cotações")
 
 # ----------- FUNÇÃO DE BUSCA -----------
+CHROMIUM_PATH = "/usr/bin/chromium-browser"  # caminho usado no apt.txt
+
 async def buscar_preco_marest(produto):
     try:
         async with async_playwright() as p:
             browser = await p.chromium.launch(
                 headless=True,
+                executable_path=CHROMIUM_PATH,
                 args=["--no-sandbox", "--disable-dev-shm-usage"]
             )
             page = await browser.new_page()
@@ -50,6 +53,7 @@ async def buscar_preco_magia(produto):
         async with async_playwright() as p:
             browser = await p.chromium.launch(
                 headless=True,
+                executable_path=CHROMIUM_PATH,
                 args=["--no-sandbox", "--disable-dev-shm-usage"]
             )
             page = await browser.new_page()
